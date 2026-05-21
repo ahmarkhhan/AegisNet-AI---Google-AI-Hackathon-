@@ -13,7 +13,10 @@ Thumbs.db
 # Backend (Java / Maven / Spring Boot)
 # =========================
 backend/target/
+frontend/package-lock.json
+
 backend/bin/
+backend/.maven/
 backend/.settings/
 backend/.classpath
 backend/.project

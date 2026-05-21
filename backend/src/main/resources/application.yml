@@ -15,7 +15,7 @@ spring:
       hibernate:
         dialect: org.hibernate.spatial.dialect.postgis.PostgisDialect
         format_sql: true
-    show-sql: true
+    show-sql: false
 
   data:
     redis:
@@ -30,9 +30,17 @@ spring:
           location: ${GCP_LOCATION:us-central1}
           model: gemini-1.5-pro
 
+  task:
+    scheduling:
+      pool:
+        size: 8
+
 server:
   port: 8080
 
 logging:
   level:
-    com.aegisnet: DEBUG
+    com.aegisnet: INFO
+    com.aegisnet.core.service.OpenMeteoService: DEBUG
+    com.aegisnet.core.service.GdacsService: INFO
+    com.aegisnet.core.service.GdeltService: INFO
