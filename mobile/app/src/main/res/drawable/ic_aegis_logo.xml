@@ -1,0 +1,51 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="128dp"
+    android:height="128dp"
+    android:viewportWidth="128"
+    android:viewportHeight="128">
+
+    <!-- Outer Glow / Shadow -->
+    <path
+        android:pathData="M64,8 L112,28 C112,68 92,100 64,120 C36,100 16,68 16,28 Z"
+        android:strokeWidth="1.5"
+        android:strokeColor="#00E5FF"
+        android:strokeAlpha="0.4" />
+
+    <!-- Solid Shield Background -->
+    <path
+        android:pathData="M64,12 L106,30 C106,64 89,92 64,110 C39,92 22,64 22,30 Z"
+        android:fillColor="#0D1E3A"
+        android:strokeWidth="2.5"
+        android:strokeColor="#00E5FF" />
+
+    <!-- Inner Core Pattern Shield -->
+    <path
+        android:pathData="M64,22 L94,35 C94,60 81,82 64,96 C47,82 34,60 34,35 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="64"
+                android:startY="22"
+                android:endX="64"
+                android:endY="96"
+                android:type="linear">
+                <item android:offset="0.0" android:color="#00E5FF" />
+                <item android:offset="1.0" android:color="#05FF80" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Center Radar Target Ring -->
+    <path
+        android:pathData="M64,59 A10,10 0 1 0 64,79 A10,10 0 1 0 64,59"
+        android:strokeWidth="1.5"
+        android:strokeColor="#0D1E3A"
+        android:fillColor="#0D1E3A"
+        android:fillAlpha="0.15" />
+
+    <!-- Sweeping Radar Target Center Dot -->
+    <path
+        android:pathData="M64,65 A4,4 0 1 0 64,73 A4,4 0 1 0 64,65"
+        android:fillColor="#FFFFFF" />
+
+</vector>

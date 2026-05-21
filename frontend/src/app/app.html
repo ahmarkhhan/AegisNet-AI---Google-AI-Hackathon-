@@ -1,128 +1,617 @@
-<div class="h-screen w-screen flex flex-col bg-aegis-dark text-slate-200 overflow-hidden">
-  
-  <!-- Top Navigation Bar -->
-  <header class="h-16 bg-aegis-panel border-b border-slate-700 flex items-center justify-between px-6 shrink-0">
+<div class="h-screen w-screen flex flex-col bg-[#0a0a0a] text-slate-200 overflow-hidden relative">
+
+  <!-- Top Nav -->
+  <header class="h-12 bg-[#111111] border-b border-slate-800 flex items-center justify-between px-5 shrink-0 z-50">
     <div class="flex items-center gap-3">
-      <div class="w-8 h-8 rounded bg-aegis-primary flex items-center justify-center font-bold text-white shadow-[0_0_15px_rgba(59,130,246,0.5)]">
-        A
-      </div>
-      <h1 class="text-xl font-bold tracking-wider">AEGIS<span class="text-aegis-primary">NET</span> AI</h1>
-      <span class="ml-4 px-2 py-1 text-xs font-semibold rounded bg-aegis-alert/20 text-aegis-alert border border-aegis-alert/30">
-        LIVE OPS
-      </span>
+      <div class="w-7 h-7 bg-red-600 rounded flex items-center justify-center font-bold text-white text-xs shadow-[0_0_12px_rgba(239,68,68,0.5)]">N</div>
+      <h1 class="text-sm font-bold tracking-widest text-white">NIGEHBAN <span class="text-red-500">AI</span></h1>
+      <span class="text-[9px] font-mono text-slate-500 ml-2">(Crisis Intelligence System)</span>
     </div>
-    
-    <div class="flex gap-4">
-      <div class="flex items-center gap-2">
-        @if (wsService.connectionStatus()) {
-          <div class="w-2 h-2 rounded-full bg-aegis-success animate-pulse"></div>
-          <span class="text-sm text-slate-400">Gemini Reasoning Engine: ONLINE</span>
-        } @else {
-          <div class="w-2 h-2 rounded-full bg-aegis-alert"></div>
-          <span class="text-sm text-slate-400">Backend Disconnected</span>
-        }
-      </div>
+
+    <!-- EOC Tactical Tabs (Synced with Mobile features) -->
+    <div class="flex items-center gap-1 bg-[#1a1a1a] p-1 rounded border border-slate-800">
+      <button (click)="currentTab = 'hud'" 
+              [class]="currentTab === 'hud' ? 'bg-cyan-500/10 text-cyan-400 border-cyan-500/30' : 'text-slate-400 hover:text-white border-transparent'" 
+              class="px-3 py-1 text-[9px] font-mono font-bold tracking-wider uppercase border rounded transition-all flex items-center gap-1.5">
+        🗺️ Tactical HUD
+      </button>
+      <button (click)="currentTab = 'resources'" 
+              [class]="currentTab === 'resources' ? 'bg-green-500/10 text-green-400 border-green-500/30' : 'text-slate-400 hover:text-white border-transparent'" 
+              class="px-3 py-1 text-[9px] font-mono font-bold tracking-wider uppercase border rounded transition-all flex items-center gap-1.5">
+        🚑 Resources
+      </button>
+      <button (click)="currentTab = 'report'" 
+              [class]="currentTab === 'report' ? 'bg-orange-500/10 text-orange-400 border-orange-500/30' : 'text-slate-400 hover:text-white border-transparent'" 
+              class="px-3 py-1 text-[9px] font-mono font-bold tracking-wider uppercase border rounded transition-all flex items-center gap-1.5">
+        📝 Report Crisis
+      </button>
+    </div>
+
+    <div class="flex gap-4 items-center text-[10px] font-mono">
+      <span class="text-slate-500">AUTONOMOUS MODE</span>
+      <span class="text-slate-500">|</span>
+      <span class="text-slate-500">30s REFRESH</span>
+      @if (wsService.connectionStatus()) {
+        <div class="flex items-center gap-1.5 text-green-400">
+          <div class="w-1.5 h-1.5 rounded-full bg-green-400 shadow-[0_0_6px_rgba(34,197,94,0.8)] animate-pulse"></div>
+          LIVE
+        </div>
+      } @else {
+        <div class="flex items-center gap-1.5 text-red-400">
+          <div class="w-1.5 h-1.5 rounded-full bg-red-400"></div>
+          OFFLINE
+        </div>
+      }
     </div>
   </header>
 
-  <!-- Main Content Area -->
+  <!-- Main -->
   <main class="flex-1 flex overflow-hidden">
-    
-    <!-- Left Panel: Crisis Alerts & Telemetry -->
-    <aside class="w-80 bg-aegis-panel border-r border-slate-700 flex flex-col shrink-0">
-      <div class="p-4 border-b border-slate-700 max-h-[50%] overflow-y-auto">
-        <h2 class="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4 flex justify-between items-center">
-          Crisis Alerts
-          <span class="bg-slate-700 text-xs px-2 py-0.5 rounded-full">{{ wsService.alerts().length }}</span>
-        </h2>
+
+    <!-- ====== LEFT PANEL: Crisis Summary ====== -->
+    <aside class="w-[300px] bg-[#111111] border-r border-slate-800 flex flex-col shrink-0 overflow-hidden" [class.hidden]="currentTab !== 'hud'">
+      
+      <!-- Total Active Crises -->
+      <div class="p-4 border-b border-slate-800 text-center">
+        <div class="text-[10px] font-mono text-slate-500 uppercase tracking-widest mb-1">Active Crisis Events</div>
+        <div class="text-5xl font-bold text-red-500 drop-shadow-[0_0_15px_rgba(239,68,68,0.4)]">
+          {{ wsService.crisisEvents().length }}
+        </div>
+        <div class="text-[9px] font-mono text-slate-600 mt-1">across Pakistan</div>
+      </div>
+
+      <!-- Criticality Breakdown (clickable counts) -->
+      <div class="p-3 border-b border-slate-800">
+        <div class="text-[9px] font-mono text-slate-500 uppercase tracking-widest mb-2">By Criticality Level</div>
         
-        @for (alert of wsService.alerts(); track alert.id) {
-          <div class="bg-slate-800/50 rounded-lg p-3 border border-aegis-alert/30 mb-3 hover:bg-slate-800 transition-colors animate-[pulse_1s_ease-in-out]">
-            <div class="flex justify-between items-start mb-2">
-              <span class="text-xs font-bold text-aegis-alert bg-aegis-alert/10 px-2 py-0.5 rounded">{{ alert.type }}</span>
+        @for (crit of ['CRITICAL', 'SEVERE', 'HIGH', 'MODERATE', 'LOW']; track crit) {
+          <div class="flex items-center justify-between py-1.5 px-2 cursor-pointer hover:bg-white/5 rounded transition-all border-l-2 mb-1"
+               [style.border-color]="wsService.getCritColor(crit)"
+               [class.bg-white/10]="wsService.selectedCriticality() === crit"
+               (click)="wsService.selectCriticality(crit)">
+            <div class="flex items-center gap-2">
+              <div class="w-2.5 h-2.5 rounded-full" [style.background-color]="wsService.getCritColor(crit)"></div>
+              <span class="text-xs font-mono text-slate-300">{{ crit }}</span>
             </div>
-            <h3 class="font-medium text-sm mb-1">{{ alert.title }}</h3>
-            <p class="text-xs text-slate-400">{{ alert.description }}</p>
-            <div class="mt-3 flex justify-between items-center text-xs">
-              <span class="text-slate-300">Severity: <span class="text-aegis-alert font-bold">{{ alert.casualtyRiskScore }}/100</span></span>
-              <button class="text-aegis-primary hover:text-blue-400 font-medium">Tracking...</button>
-            </div>
+            <span class="text-lg font-bold" [style.color]="wsService.getCritColor(crit)">
+              {{ wsService.getEventsByCriticality(crit).length }}
+            </span>
           </div>
-        } @empty {
-          <div class="text-slate-500 text-xs text-center py-4">No active alerts. System nominal.</div>
         }
       </div>
 
-      <div class="p-4 flex-1 overflow-y-auto">
-        <h2 class="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4 flex justify-between items-center">
-          Signal Ingestion
-          <span class="bg-slate-700 text-xs px-2 py-0.5 rounded-full">{{ wsService.signals().length }}</span>
-        </h2>
-        
-        @for (signal of wsService.signals(); track signal.id) {
-          <div class="text-xs mb-3 pl-2 border-l-2" 
-               [class.border-aegis-primary]="signal.source === 'SUPARCO_WEATHER'"
-               [class.border-aegis-warn]="signal.source === 'SOCIAL_X'">
-            <div class="text-slate-400 flex justify-between">
-              <span class="font-bold">{{ signal.source }}</span>
+      <!-- Clickable Event List (shows when a criticality is selected) -->
+      <div class="flex-1 overflow-y-auto">
+        @if (wsService.showEventList()) {
+          <div class="p-2">
+            <div class="text-[9px] font-mono text-slate-500 uppercase tracking-widest mb-2 px-1">
+              {{ wsService.selectedCriticality() }} EVENTS
             </div>
-            <div class="text-slate-300 mt-1 truncate" [title]="signal.rawPayload">{{ signal.rawPayload }}</div>
-            <div class="text-aegis-warn mt-1 text-[10px]">Confidence: {{ signal.confidence | number:'1.2-2' }}</div>
+            @for (event of wsService.getEventsByCriticality(wsService.selectedCriticality()); track event.id) {
+              <div class="p-2 mb-1.5 rounded cursor-pointer border transition-all text-[11px]"
+                   [ngClass]="wsService.getCritBg(event.criticality)"
+                   [class.ring-1]="wsService.selectedEvent()?.id === event.id"
+                   [class.ring-white/30]="wsService.selectedEvent()?.id === event.id"
+                   (click)="wsService.selectEvent(event)">
+                <div class="flex items-center gap-1.5 mb-0.5">
+                  <span>{{ wsService.getTypeIcon(event.type) }}</span>
+                  <span class="font-bold text-white truncate">{{ event.area }}</span>
+                </div>
+                <div class="text-slate-400 text-[10px] truncate">{{ event.heading }}</div>
+                <div class="flex justify-between mt-1 text-[9px] text-slate-500 font-mono">
+                  <span>{{ event.type }}</span>
+                  <span [ngClass]="wsService.getCritClass(event.criticality)">{{ event.criticalityScore }}/100</span>
+                </div>
+              </div>
+            } @empty {
+              <div class="text-slate-600 text-[10px] font-mono text-center py-4">No events at this level</div>
+            }
           </div>
-        } @empty {
-          <div class="text-slate-500 text-xs text-center py-4">Awaiting signals...</div>
+        } @else {
+          <!-- Event list by region when no criticality selected -->
+          <div class="p-2">
+            <div class="text-[9px] font-mono text-slate-500 uppercase tracking-widest mb-2 px-1">
+              Crisis Events by Region
+            </div>
+            @for (event of wsService.crisisEvents(); track event.id) {
+              <div class="flex items-center gap-2 py-1 px-2 cursor-pointer hover:bg-white/5 rounded transition-all text-[10px]"
+                   (click)="wsService.selectEvent(event)">
+                <div class="w-2 h-2 rounded-full shrink-0" [style.background-color]="wsService.getCritColor(event.criticality)"></div>
+                <span>{{ wsService.getTypeIcon(event.type) }}</span>
+                <span class="text-slate-300 truncate flex-1">{{ event.area }}</span>
+                <span class="font-mono text-slate-500">{{ event.region }}</span>
+              </div>
+            } @empty {
+              <div class="text-slate-600 text-[10px] font-mono text-center py-8">
+                <div class="animate-spin w-5 h-5 border-2 border-red-500/30 border-t-red-500 rounded-full mx-auto mb-2"></div>
+                Initializing...
+              </div>
+            }
+          </div>
         }
+      </div>
+
+      <!-- Last Updated -->
+      <div class="p-2 border-t border-slate-800 text-[8px] font-mono text-slate-600 text-center">
+        Last Updated: {{ currentTime }}
       </div>
     </aside>
 
-    <!-- Center Panel: Map Simulation -->
-    <section class="flex-1 bg-slate-900 relative">
-      <!-- Placeholder for Map -->
-      <div class="absolute inset-0 flex items-center justify-center flex-col z-0">
-        <div class="w-full h-full opacity-30 bg-[url('https://maps.googleapis.com/maps/api/staticmap?center=33.9070,73.3943&zoom=13&size=800x800&maptype=roadmap&style=feature:all|element:geometry|color:0x202c3e')] bg-cover bg-center"></div>
-        <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-[2px]"></div>
-        
-        <div class="z-10 text-center">
-          <svg class="w-16 h-16 text-slate-600 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-          </svg>
-          <h2 class="text-xl font-bold text-slate-400">TACTICAL MAP OFFLINE</h2>
-          <p class="text-sm text-slate-500 mt-2">Map will render here in production build with API keys.</p>
-        </div>
-      </div>
+    <!-- ====== CENTER: Satellite Map ====== -->
+    <section class="flex-1 relative overflow-hidden bg-[#0a0a0a]" [class.hidden]="currentTab !== 'hud'">
       
-      <!-- Overlay Controls -->
-      <div class="absolute top-4 right-4 z-10 flex gap-2">
-        <button (click)="wsService.simulateWeather()" class="bg-aegis-panel border border-slate-600 text-xs px-3 py-1.5 rounded hover:bg-slate-700 transition-colors shadow-lg">
-          Inject Weather Anomaly
-        </button>
-        <button (click)="wsService.simulateSocial()" class="bg-aegis-panel border border-slate-600 text-xs px-3 py-1.5 rounded hover:bg-slate-700 transition-colors shadow-lg">
-          Inject Social Panic
-        </button>
+      <!-- Map Container -->
+      <div id="satellite-map" class="absolute inset-0 z-0 satellite-cyber-map"></div>
+      
+      <!-- Scanline -->
+      <div class="scanline z-10"></div>
+
+      <!-- Crosshairs -->
+      <div class="absolute top-2 left-2 w-4 h-4 border-t border-l border-red-500/40 z-20 pointer-events-none"></div>
+      <div class="absolute top-2 right-2 w-4 h-4 border-t border-r border-red-500/40 z-20 pointer-events-none"></div>
+      <div class="absolute bottom-2 left-2 w-4 h-4 border-b border-l border-red-500/40 z-20 pointer-events-none"></div>
+      <div class="absolute bottom-2 right-2 w-4 h-4 border-b border-r border-red-500/40 z-20 pointer-events-none"></div>
+
+      <!-- Coords HUD -->
+      <div class="absolute top-3 left-3 z-20 text-[9px] font-mono text-green-400/80 bg-black/70 px-2 py-1 rounded border border-slate-800 pointer-events-none">
+        LAT {{ mouseCoords.lat }} | LNG {{ mouseCoords.lng }} | Z{{ mapZoom }}
+      </div>
+
+      <!-- Environmental Telemetry HUD -->
+      <div class="absolute bottom-4 left-4 right-4 z-20 flex gap-3 overflow-x-auto pointer-events-auto pb-2 custom-scrollbar">
+        @for (city of wsService.cityThreats(); track city.cityName) {
+          <div class="bg-black/80 backdrop-blur border border-slate-700/50 rounded-lg p-2.5 min-w-[200px] shrink-0 hover:bg-[#111] transition-colors border-t-2"
+               [style.border-top-color]="city.overallThreatLevel > 80 ? '#ef4444' : city.overallThreatLevel > 50 ? '#f97316' : '#3b82f6'">
+            <div class="flex justify-between items-center mb-2 border-b border-slate-800 pb-1.5">
+              <span class="font-bold text-white text-[11px] uppercase tracking-wider">{{ city.cityName }}</span>
+              <span class="text-[8px] font-mono px-1.5 py-0.5 rounded bg-white/5 text-slate-300 border border-slate-700">
+                THREAT: {{ city.overallThreatLevel }}
+              </span>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-x-4 gap-y-2 text-[9px] font-mono">
+              <div class="flex flex-col">
+                <span class="text-slate-500 mb-0.5">AIR QUALITY</span>
+                <div class="flex items-center gap-1.5">
+                  <div class="w-1.5 h-1.5 rounded-full" [ngClass]="city.usAqi > 150 ? 'bg-orange-500 animate-pulse' : 'bg-green-500'"></div>
+                  <span [ngClass]="city.usAqi > 150 ? 'text-orange-400 font-bold' : 'text-slate-300'">{{ city.usAqi || 0 }} AQI</span>
+                </div>
+              </div>
+              <div class="flex flex-col">
+                <span class="text-slate-500 mb-0.5">PM 2.5</span>
+                <span class="text-slate-300">{{ city.pm25 || 0 }} µg/m³</span>
+              </div>
+              <div class="flex flex-col">
+                <span class="text-slate-500 mb-0.5">RIVER FLOW</span>
+                <div class="flex items-center gap-1.5">
+                  <div class="w-1.5 h-1.5 rounded-full" [ngClass]="city.riverDischargeM3s > 1000 ? 'bg-blue-500 animate-pulse' : 'bg-slate-500'"></div>
+                  <span [ngClass]="city.riverDischargeM3s > 1000 ? 'text-blue-400 font-bold' : 'text-slate-300'">{{ city.riverDischargeM3s || 0 }} m³/s</span>
+                </div>
+              </div>
+              <div class="flex flex-col">
+                <span class="text-slate-500 mb-0.5">WEATHER</span>
+                <span class="text-slate-300">{{ city.temperatureC || 0 }}°C | {{ city.precipitationMm || 0 }}mm</span>
+              </div>
+            </div>
+          </div>
+        }
       </div>
     </section>
 
-    <!-- Right Panel: Agent Observability Trace -->
-    <aside class="w-80 bg-aegis-panel border-l border-slate-700 flex flex-col shrink-0">
-      <div class="p-4 border-b border-slate-700 flex justify-between items-center">
-        <h2 class="text-sm font-semibold text-slate-400 uppercase tracking-wider">Agent Traces</h2>
-        @if (wsService.connectionStatus()) {
-            <div class="w-2 h-2 rounded-full bg-aegis-primary animate-ping"></div>
-        }
+    <!-- ====== RIGHT PANEL: Stats + Detail ====== -->
+    <aside class="w-[360px] bg-[#111111] border-l border-slate-800 flex flex-col shrink-0 overflow-hidden" [class.hidden]="currentTab !== 'hud'">
+
+      <!-- Top Stats Row -->
+      <div class="grid grid-cols-2 border-b border-slate-800">
+        <div class="p-3 border-r border-slate-800 text-center">
+          <div class="text-[9px] font-mono text-slate-500 uppercase tracking-widest">Affected</div>
+          <div class="text-2xl font-bold text-orange-400">{{ formatNum(wsService.getTotalAffected()) }}</div>
+        </div>
+        <div class="p-3 text-center">
+          <div class="text-[9px] font-mono text-slate-500 uppercase tracking-widest">Displaced</div>
+          <div class="text-2xl font-bold text-yellow-400">{{ formatNum(wsService.getTotalDisplaced()) }}</div>
+        </div>
       </div>
-      
-      <div class="flex-1 overflow-y-auto p-4 space-y-4 font-mono text-[11px] flex flex-col-reverse">
-        @for (trace of wsService.agentTraces(); track $index) {
-          <div [class.text-aegis-primary]="trace.includes('[System]')"
-               [class.text-slate-300]="trace.includes('[Agent_1')"
-               [class.text-blue-400]="trace.includes('[Agent_2')"
-               [class.text-aegis-warn]="trace.includes('[Agent_4')"
-               [class.text-aegis-success]="trace.includes('[Agent_5')">
-            {{ trace }}
+
+      <div class="grid grid-cols-2 border-b border-slate-800">
+        <div class="p-3 border-r border-slate-800 text-center">
+          <div class="text-[9px] font-mono text-slate-500 uppercase tracking-widest">Active Response</div>
+          <div class="text-2xl font-bold text-red-400">{{ wsService.getActiveResponseCount() }}</div>
+        </div>
+        <div class="p-3 text-center">
+          <div class="text-[9px] font-mono text-slate-500 uppercase tracking-widest">Zones Monitored</div>
+          <div class="text-2xl font-bold text-cyan-400">20</div>
+        </div>
+      </div>
+
+      <!-- Detail View (when event is selected) -->
+      @if (wsService.selectedEvent(); as event) {
+        <div class="flex-1 overflow-y-auto border-b border-slate-800">
+          <div class="p-3 border-b border-slate-800 flex justify-between items-start">
+            <div>
+              <div class="text-lg font-bold text-white flex items-center gap-2">
+                {{ wsService.getTypeIcon(event.type) }} {{ event.area }}
+              </div>
+              <div class="text-xs text-slate-400">{{ event.region }}</div>
+            </div>
+            <button (click)="wsService.closeDetail()" class="text-slate-500 hover:text-white text-lg px-2">✕</button>
           </div>
-        }
-      </div>
+
+          <div class="p-3 space-y-3 text-[11px]">
+            <!-- Heading -->
+            <div class="p-2 rounded border" [ngClass]="wsService.getCritBg(event.criticality)">
+              <div class="font-bold text-white text-xs">{{ event.heading }}</div>
+              <div class="flex items-center gap-2 mt-1">
+                <span class="font-mono text-[9px] px-1.5 py-0.5 rounded" [ngClass]="wsService.getCritClass(event.criticality)"
+                      [style.background-color]="wsService.getCritColor(event.criticality) + '22'">
+                  {{ event.criticality }} — {{ event.criticalityScore }}/100
+                </span>
+                <span class="text-slate-500 text-[9px] font-mono">{{ event.responseStatus }}</span>
+              </div>
+            </div>
+
+            <!-- Description -->
+            <div>
+              <div class="text-[9px] font-mono text-slate-500 uppercase mb-1">Intelligence Assessment</div>
+              <p class="text-slate-300 leading-relaxed">{{ event.description }}</p>
+            </div>
+
+            <!-- Impact Stats -->
+            <div>
+              <div class="text-[9px] font-mono text-slate-500 uppercase mb-1">Impact Assessment</div>
+              <div class="grid grid-cols-2 gap-2">
+                <div class="bg-[#1a1a1a] p-2 rounded border border-slate-800">
+                  <div class="text-orange-400 font-bold">{{ formatNum(event.affectedPopulation) }}</div>
+                  <div class="text-[8px] text-slate-500 font-mono">AFFECTED</div>
+                </div>
+                <div class="bg-[#1a1a1a] p-2 rounded border border-slate-800">
+                  <div class="text-yellow-400 font-bold">{{ formatNum(event.displacedEstimate) }}</div>
+                  <div class="text-[8px] text-slate-500 font-mono">DISPLACED</div>
+                </div>
+                <div class="bg-[#1a1a1a] p-2 rounded border border-slate-800">
+                  <div class="text-red-400 font-bold">{{ event.casualtyEstimate }}</div>
+                  <div class="text-[8px] text-slate-500 font-mono">CASUALTIES EST.</div>
+                </div>
+                <div class="bg-[#1a1a1a] p-2 rounded border border-slate-800">
+                  <div class="text-slate-300 font-bold">{{ event.infrastructureDamagePercent }}%</div>
+                  <div class="text-[8px] text-slate-500 font-mono">INFRA DAMAGE</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Crisis Management -->
+            <div>
+              <div class="text-[9px] font-mono text-slate-500 uppercase mb-1">Crisis Management</div>
+              <div class="space-y-1.5">
+                <div class="bg-[#1a1a1a] p-2 rounded border border-slate-800">
+                  <div class="text-[8px] text-slate-500 font-mono mb-0.5">RESOURCES DEPLOYED</div>
+                  <div class="text-slate-300">{{ event.resourcesDeployed }}</div>
+                </div>
+                <div class="bg-[#1a1a1a] p-2 rounded border border-slate-800">
+                  <div class="text-[8px] text-slate-500 font-mono mb-0.5">EVACUATION STATUS</div>
+                  <div class="text-slate-300">{{ event.evacuationStatus }}</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Recommended Actions -->
+            <div>
+              <div class="text-[9px] font-mono text-slate-500 uppercase mb-1">Recommended Actions</div>
+              <div class="bg-[#1a1a1a] p-2 rounded border border-slate-800">
+                @for (line of event.recommendedActions.split('\n'); track $index) {
+                  <div class="text-slate-300 py-0.5">{{ line }}</div>
+                }
+              </div>
+            </div>
+
+            <!-- Source -->
+            <div class="text-[8px] font-mono flex justify-between items-end pt-2 mt-2 border-t border-slate-800">
+              <div class="flex flex-col gap-0.5">
+                <span class="text-slate-400">SRC: {{ event.source }}</span>
+                <span class="text-slate-600">CONF: {{ event.confidence | number:'1.2-2' }}</span>
+              </div>
+              @if (event.referenceLink) {
+                <a [href]="event.referenceLink" target="_blank" class="px-2 py-1 bg-[#0a1929] hover:bg-[#0f2942] text-cyan-400 border border-cyan-900/50 rounded transition-colors flex items-center gap-1">
+                  VERIFY SOURCE
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-2.5 w-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                </a>
+              }
+            </div>
+          </div>
+        </div>
+      } @else {
+        <!-- Agent Trace (when no event selected) -->
+        <div class="flex-1 overflow-hidden flex flex-col">
+          <div class="p-2 border-b border-slate-800 text-[9px] font-mono text-slate-500 uppercase tracking-widest">
+            Agent Intelligence Feed
+          </div>
+          <div class="flex-1 overflow-y-auto p-2 space-y-1 font-mono text-[8px] leading-relaxed flex flex-col-reverse">
+            @for (trace of wsService.agentTraces(); track $index) {
+              <div class="pl-2 border-l border-slate-800 opacity-80"
+                   [class.text-green-400]="trace.includes('[System]')"
+                   [class.text-slate-500]="trace.includes('[Agent_1')"
+                   [class.text-blue-400]="trace.includes('[Agent_3')"
+                   [class.text-orange-400]="trace.includes('[Agent_4')"
+                   [class.text-red-400]="trace.includes('⚠')">
+                {{ trace }}
+              </div>
+            } @empty {
+              <div class="text-slate-600">Connecting...</div>
+            }
+          </div>
+        </div>
+      }
     </aside>
+
+    <!-- ====== TABS: Resource Center ====== -->
+    @if (currentTab === 'resources') {
+      <div class="flex-1 flex flex-col bg-[#0a0a0a] overflow-hidden p-6 space-y-6">
+        
+        <!-- Header & KPIs -->
+        <div class="flex justify-between items-center shrink-0">
+          <div>
+            <h2 class="text-xl font-bold tracking-wider text-green-400">🚑 NATIONAL EMERGENCY RESOURCE CENTER</h2>
+            <p class="text-xs text-slate-500 font-mono">Real-time resource dispatch monitoring & EOC mobilization metrics</p>
+          </div>
+          <div class="flex items-center gap-3">
+            <span class="text-xs font-mono text-slate-400 bg-white/5 border border-slate-800 px-3 py-1.5 rounded">
+              READINESS: <span class="text-green-400 font-bold">98.2%</span>
+            </span>
+          </div>
+        </div>
+
+        <!-- KPI Grid -->
+        <div class="grid grid-cols-4 gap-4 shrink-0">
+          <div class="bg-[#111] border border-green-500/20 p-4 rounded-lg flex flex-col justify-between hover:border-green-500/40 transition-colors shadow-[0_0_15px_rgba(34,197,94,0.05)]">
+            <span class="text-[9px] font-mono text-slate-500 uppercase tracking-widest">Active Response Units</span>
+            <span class="text-3xl font-bold text-green-400 mt-2">{{ wsService.crisisEvents().length * 2 }} Teams</span>
+            <span class="text-[8px] font-mono text-slate-600 mt-1">Ingested from NDMA / Army dispatch</span>
+          </div>
+          <div class="bg-[#111] border border-cyan-500/20 p-4 rounded-lg flex flex-col justify-between hover:border-cyan-500/40 transition-colors shadow-[0_0_15px_rgba(6,182,212,0.05)]">
+            <span class="text-[9px] font-mono text-slate-500 uppercase tracking-widest">Avg Dispatch Latency</span>
+            <span class="text-3xl font-bold text-cyan-400 mt-2">12.4 minutes</span>
+            <span class="text-[8px] font-mono text-slate-600 mt-1">Satellite tracking ETA verification</span>
+          </div>
+          <div class="bg-[#111] border border-yellow-500/20 p-4 rounded-lg flex flex-col justify-between hover:border-yellow-500/40 transition-colors shadow-[0_0_15px_rgba(234,179,8,0.05)]">
+            <span class="text-[9px] font-mono text-slate-500 uppercase tracking-widest">Total Protected Citizens</span>
+            <span class="text-3xl font-bold text-yellow-400 mt-2">{{ formatNum(wsService.getTotalAffected() * 4) }}</span>
+            <span class="text-[8px] font-mono text-slate-600 mt-1">Estimated within safety perimeters</span>
+          </div>
+          <div class="bg-[#111] border border-red-500/20 p-4 rounded-lg flex flex-col justify-between hover:border-red-500/40 transition-colors shadow-[0_0_15px_rgba(239,68,68,0.05)]">
+            <span class="text-[9px] font-mono text-slate-500 uppercase tracking-widest">Critical Containments</span>
+            <span class="text-3xl font-bold text-red-500 mt-2">100% Active</span>
+            <span class="text-[8px] font-mono text-slate-600 mt-1">Direct feedback loop active</span>
+          </div>
+        </div>
+
+        <!-- Split Pane -->
+        <div class="flex-1 flex gap-6 overflow-hidden">
+          
+          <!-- Left Panel: Deployed resources list per crisis -->
+          <div class="w-1/2 bg-[#111] border border-slate-800 rounded-lg flex flex-col overflow-hidden">
+            <div class="p-3.5 border-b border-slate-800 flex justify-between items-center bg-[#161616]">
+              <span class="text-xs font-mono font-bold tracking-wider text-slate-400">ACTIVE DEPLOYMENTS BY CRISIS</span>
+              <span class="text-[9px] font-mono text-slate-500">{{ wsService.crisisEvents().length }} incidents active</span>
+            </div>
+            
+            <div class="flex-1 overflow-y-auto p-4 space-y-3">
+              @for (event of wsService.crisisEvents(); track event.id) {
+                <div class="bg-black/40 border border-slate-800 p-3.5 rounded-lg hover:border-slate-700/80 transition-colors">
+                  <div class="flex justify-between items-start mb-2">
+                    <div>
+                      <h4 class="text-xs font-bold text-white flex items-center gap-1.5">
+                        {{ wsService.getTypeIcon(event.type) }} {{ event.area }}
+                      </h4>
+                      <p class="text-[9px] text-slate-500 font-mono mt-0.5">{{ event.heading }}</p>
+                    </div>
+                    <span [class]="event.criticalityScore >= 80 ? 'bg-red-500/10 text-red-400 border-red-500/30' : 'bg-orange-500/10 text-orange-400 border-orange-500/30'"
+                          class="px-2 py-0.5 text-[8px] font-mono font-bold border rounded uppercase">
+                      {{ event.criticality }}
+                    </span>
+                  </div>
+
+                  <!-- Resources -->
+                  <div class="bg-[#161616] p-2.5 rounded border border-slate-800 text-[10px] space-y-1.5">
+                    <div class="flex justify-between text-slate-400 font-mono text-[9px]">
+                      <span>DEPLOYED UNITS</span>
+                      <span class="text-green-400">MOBILIZED</span>
+                    </div>
+                    <p class="text-slate-200 font-semibold">{{ event.resourcesDeployed }}</p>
+                  </div>
+
+                  <!-- ETA Progress -->
+                  <div class="mt-2.5 space-y-1">
+                    <div class="flex justify-between text-[8px] font-mono text-slate-500">
+                      <span>ESTIMATED RESPONSE TIMELINE</span>
+                      <span class="text-cyan-400">ETA: 15-30m</span>
+                    </div>
+                    <div class="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                      <div class="h-full bg-gradient-to-r from-green-500 to-cyan-500 rounded-full animate-pulse" [style.width]="event.criticalityScore + '%'"></div>
+                    </div>
+                  </div>
+                </div>
+              } @empty {
+                <div class="text-center py-20 text-slate-600 text-xs font-mono">
+                  No active crisis events. All resources on standard alert.
+                </div>
+              }
+            </div>
+          </div>
+
+          <!-- Right Panel: Advanced Timelines -->
+          <div class="w-1/2 bg-[#111] border border-slate-800 rounded-lg flex flex-col overflow-hidden">
+            <div class="p-3.5 border-b border-slate-800 bg-[#161616]">
+              <span class="text-xs font-mono font-bold tracking-wider text-slate-400">INCIDENT COMMAND TIMELINE SYSTEM</span>
+            </div>
+
+            <div class="flex-1 overflow-y-auto p-4 space-y-6">
+              @for (event of wsService.crisisEvents() | slice:0:3; track event.id) {
+                <div class="space-y-4">
+                  <div class="flex justify-between items-center">
+                    <span class="text-xs font-bold text-white uppercase">{{ event.area }} — Tactical Progress</span>
+                    <span class="text-[9px] font-mono text-slate-500">{{ event.responseStatus }}</span>
+                  </div>
+
+                  <div class="relative border-l-2 border-slate-800 pl-6 ml-3 space-y-4">
+                    <!-- Step 1 -->
+                    <div class="relative">
+                      <div class="absolute -left-8 top-0.5 w-3 h-3 rounded-full bg-green-500 shadow-[0_0_6px_rgba(34,197,94,0.6)]"></div>
+                      <h5 class="text-[10px] font-mono font-bold text-slate-300">STAGE 1: SIGNAL INGESTION & PARSING</h5>
+                      <p class="text-[9px] text-slate-500 mt-0.5">High-fidelity multi-source inputs verified by NLP heuristic matrix. (100% Complete)</p>
+                    </div>
+
+                    <!-- Step 2 -->
+                    <div class="relative">
+                      <div class="absolute -left-8 top-0.5 w-3 h-3 rounded-full bg-green-500 shadow-[0_0_6px_rgba(34,197,94,0.6)]"></div>
+                      <h5 class="text-[10px] font-mono font-bold text-slate-300">STAGE 2: AUTONOMOUS AI THREAT ASSESSMENT</h5>
+                      <p class="text-[9px] text-slate-500 mt-0.5">Criticality level computed at {{ event.criticalityScore }}/100. Action plans generated. (100% Complete)</p>
+                    </div>
+
+                    <!-- Step 3 -->
+                    <div class="relative">
+                      <div class="absolute -left-8 top-0.5 w-3 h-3 rounded-full bg-cyan-500 shadow-[0_0_6px_rgba(6,182,212,0.6)] animate-ping"></div>
+                      <div class="absolute -left-8 top-0.5 w-3 h-3 rounded-full bg-cyan-500"></div>
+                      <h5 class="text-[10px] font-mono font-bold text-cyan-400">STAGE 3: DISPATCHING EMERGENCY TEAMS</h5>
+                      <p class="text-[9px] text-slate-400 mt-0.5">Mobilizing: {{ event.resourcesDeployed }}. (80% Dispatched)</p>
+                    </div>
+
+                    <!-- Step 4 -->
+                    <div class="relative opacity-40">
+                      <div class="absolute -left-8 top-0.5 w-3 h-3 rounded-full bg-slate-800"></div>
+                      <h5 class="text-[10px] font-mono font-bold text-slate-500">STAGE 4: LOCAL CONTAINMENT & MITIGATION</h5>
+                      <p class="text-[9px] text-slate-500 mt-0.5">Awaiting active containment telemetry status updates from the field.</p>
+                    </div>
+                  </div>
+                </div>
+                @if (!$last) { <div class="border-b border-slate-800/80 my-4"></div> }
+              } @empty {
+                <div class="text-center py-20 text-slate-600 text-xs font-mono">
+                  No active incidents for command timeline parsing.
+                </div>
+              }
+            </div>
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- ====== TABS: Citizen Reporting ====== -->
+    @if (currentTab === 'report') {
+      <div class="flex-1 flex flex-col bg-[#0a0a0a] overflow-hidden p-6 items-center justify-center">
+        <div class="w-full max-w-xl bg-[#111] border border-slate-800 rounded-xl flex flex-col overflow-hidden shadow-[0_0_40px_rgba(249,115,22,0.04)] text-xs">
+          <div class="p-4 border-b border-slate-800 bg-[#161616] flex items-center justify-between">
+            <div>
+              <h2 class="text-md font-bold tracking-wider text-orange-500">📝 REPORT CRISIS INCIDENT</h2>
+              <p class="text-[10px] text-slate-500 font-mono mt-0.5">Direct link to EOC Core AI Reasoning Network</p>
+            </div>
+            <span class="text-[9px] font-mono text-orange-400/80 bg-orange-500/10 border border-orange-500/20 px-2 py-0.5 rounded">
+              CITIZEN UPLINK
+            </span>
+          </div>
+
+          <div class="p-6 space-y-4 overflow-y-auto flex-1">
+            
+            @if (reportSuccess) {
+              <div class="bg-green-500/15 border border-green-500/30 text-green-400 p-4 rounded-lg text-center space-y-2 py-8 animate-pulse">
+                <span class="text-4xl">🚀</span>
+                <h3 class="font-bold text-sm">CITIZEN ALERT INGESTED SUCCESSFULLY!</h3>
+                <p class="text-[10px] text-green-500 font-mono">Broadcasting crisis coordinates to active EOC drone grids and maps...</p>
+              </div>
+            } @else {
+              <!-- Step 1: Crisis Type -->
+              <div class="space-y-1.5">
+                <label class="font-mono text-[10px] text-slate-400 uppercase tracking-wider block">1. Select Threat Type</label>
+                <select [value]="reportForm.type" (change)="reportForm.type = $any($event.target).value"
+                        class="w-full bg-[#161616] border border-slate-800 rounded px-3 py-2 text-white font-mono focus:outline-none focus:border-orange-500 transition-colors">
+                  <option value="">Select a crisis type...</option>
+                  <option value="ARMED_VIOLENCE">🔫 Active Shooting/Armed Violence</option>
+                  <option value="POLITICAL_RALLY">📢 Political Rally/Jalsa</option>
+                  <option value="STAMPEDE_RISK">🏃 Stampede/Crowd Crush</option>
+                  <option value="DISEASE_OUTBREAK">🦠 Disease Outbreak</option>
+                  <option value="INFRASTRUCTURE_COLLAPSE">🏗️ Infrastructure Collapse</option>
+                  <option value="CYBERATTACK">💻 Cyber Attack</option>
+                  <option value="MASS_ENTRAPMENT_RISK">⛓️ Mass Entrapment</option>
+                  <option value="FLOOD_ESCALATION">🌊 Flooding/Water Emergency</option>
+                  <option value="TRAFFIC_ACCIDENT">🚗 Major Traffic Accident</option>
+                  <option value="FIRE_OUTBREAK">🔥 Fire Outbreak</option>
+                </select>
+              </div>
+
+              <!-- Step 2: Title -->
+              <div class="space-y-1.5">
+                <label class="font-mono text-[10px] text-slate-400 uppercase tracking-wider block">2. Incident Heading</label>
+                <input type="text" [value]="reportForm.title" (input)="reportForm.title = $any($event.target).value"
+                       placeholder="e.g. Shooting Alert at Defence Mall"
+                       class="w-full bg-[#161616] border border-slate-800 rounded px-3 py-2 text-white font-semibold focus:outline-none focus:border-orange-500 transition-colors">
+              </div>
+
+              <!-- Step 3: Description -->
+              <div class="space-y-1.5">
+                <label class="font-mono text-[10px] text-slate-400 uppercase tracking-wider block">3. Detailed Description</label>
+                <textarea [value]="reportForm.description" (input)="reportForm.description = $any($event.target).value"
+                          rows="3" placeholder="State exactly what you see, hear, or know. Include any specific locations or landmark directions."
+                          class="w-full bg-[#161616] border border-slate-800 rounded px-3 py-2 text-white leading-relaxed focus:outline-none focus:border-orange-500 transition-colors"></textarea>
+              </div>
+
+              <!-- Step 4: Severity & Impact -->
+              <div class="grid grid-cols-2 gap-4">
+                <div class="space-y-1.5">
+                  <label class="font-mono text-[10px] text-slate-400 uppercase tracking-wider block">4. Severity Assessment</label>
+                  <div class="flex items-center gap-1.5 bg-[#161616] p-1 rounded border border-slate-800">
+                    @for (sev of ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']; track sev) {
+                      <button (click)="reportForm.severity = sev"
+                              [class]="reportForm.severity === sev ? 'bg-orange-500 text-white font-bold' : 'text-slate-400 hover:text-white'"
+                              class="flex-1 py-1 rounded text-[8px] font-mono uppercase tracking-wider transition-all">
+                        {{ sev }}
+                      </button>
+                    }
+                  </div>
+                </div>
+                <div class="space-y-1.5">
+                  <label class="font-mono text-[10px] text-slate-400 uppercase tracking-wider block">5. Estimated Impact (People)</label>
+                  <input type="number" [value]="reportForm.affectedCount" (input)="reportForm.affectedCount = +$any($event.target).value"
+                         class="w-full bg-[#161616] border border-slate-800 rounded px-3 py-1.5 text-white font-semibold focus:outline-none focus:border-orange-500 transition-colors">
+                </div>
+              </div>
+
+              <!-- Step 5: Coordinates -->
+              <div class="space-y-1.5">
+                <div class="flex justify-between items-center">
+                  <label class="font-mono text-[10px] text-slate-400 uppercase tracking-wider block">6. Sector Geo-Coordinates</label>
+                  <button (click)="useMapCenterCoords()" class="text-[8px] font-mono text-cyan-400 hover:underline">
+                    📍 Copy Current Map Center
+                  </button>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                  <div class="flex items-center gap-2 bg-[#161616] border border-slate-800 rounded px-2">
+                    <span class="font-mono text-slate-600 text-[9px]">LAT</span>
+                    <input type="number" step="0.0001" [value]="reportForm.latitude" (input)="reportForm.latitude = +$any($event.target).value"
+                           class="w-full bg-transparent border-none text-white focus:outline-none py-1.5 font-mono">
+                  </div>
+                  <div class="flex items-center gap-2 bg-[#161616] border border-slate-800 rounded px-2">
+                    <span class="font-mono text-slate-600 text-[9px]">LNG</span>
+                    <input type="number" step="0.0001" [value]="reportForm.longitude" (input)="reportForm.longitude = +$any($event.target).value"
+                           class="w-full bg-transparent border-none text-white focus:outline-none py-1.5 font-mono">
+                  </div>
+                </div>
+              </div>
+
+              <!-- Submit button -->
+              <button (click)="submitReport()" [disabled]="reportSubmitting"
+                      class="w-full mt-4 bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white font-bold tracking-wider uppercase py-2.5 rounded shadow-[0_0_15px_rgba(249,115,22,0.3)] disabled:opacity-50 transition-all flex items-center justify-center gap-2">
+                @if (reportSubmitting) {
+                  <div class="animate-spin w-4 h-4 border-2 border-white/30 border-t-white rounded-full"></div>
+                  Emitting Uplink...
+                } @else {
+                  📡 TRANSMIT REPORT TO EOC
+                }
+              </button>
+            }
+
+          </div>
+        </div>
+      </div>
+    }
 
   </main>
 </div>

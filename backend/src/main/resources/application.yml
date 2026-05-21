@@ -3,36 +3,31 @@ spring:
     name: aegisnet-core
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/aegisnet
-    username: aegis_user
-    password: aegis_password
-    driver-class-name: org.postgresql.Driver
+    url: jdbc:h2:mem:aegisnet;DB_CLOSE_DELAY=-1
+    username: sa
+    password: 
+    driver-class-name: org.h2.Driver
 
   jpa:
     hibernate:
       ddl-auto: update
     properties:
       hibernate:
-        dialect: org.hibernate.spatial.dialect.postgis.PostgisDialect
+        dialect: org.hibernate.dialect.H2Dialect
         format_sql: true
-    show-sql: true
+    show-sql: false
 
-  data:
-    redis:
-      host: localhost
-      port: 6379
-
-  ai:
-    vertex:
-      ai:
-        gemini:
-          project-id: ${GCP_PROJECT_ID:mock-project-id}
-          location: ${GCP_LOCATION:us-central1}
-          model: gemini-1.5-pro
+  task:
+    scheduling:
+      pool:
+        size: 8
 
 server:
   port: 8080
 
 logging:
   level:
-    com.aegisnet: DEBUG
+    com.aegisnet: INFO
+    com.aegisnet.core.service.OpenMeteoService: DEBUG
+    com.aegisnet.core.service.GdacsService: INFO
+    com.aegisnet.core.service.GdeltService: INFO
