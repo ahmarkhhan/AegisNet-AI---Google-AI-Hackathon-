@@ -13,6 +13,7 @@ import org.springframework.web.client.RestTemplate;
  */
 @Service
 @Slf4j
+@SuppressWarnings("null")
 public class OpenMeteoService {
 
     private final ObjectMapper objectMapper = new ObjectMapper();

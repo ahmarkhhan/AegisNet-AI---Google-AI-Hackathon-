@@ -15,6 +15,7 @@ import java.util.*;
  */
 @Service
 @Slf4j
+@SuppressWarnings("null")
 public class GdeltService {
 
     private final ObjectMapper objectMapper = new ObjectMapper();

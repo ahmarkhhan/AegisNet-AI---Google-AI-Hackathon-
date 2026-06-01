@@ -23,6 +23,7 @@ import java.util.*;
  */
 @Service
 @Slf4j
+@SuppressWarnings("null")
 public class GdacsService {
 
     private final RestTemplate restTemplate;
@@ -100,7 +101,6 @@ public class GdacsService {
                 String alertScore  = getText(item, "gdacs:alertscore");
                 String eventName   = getText(item, "gdacs:eventname");
                 String eventId     = getText(item, "gdacs:eventid");
-                String countryText = desc + " " + title;
 
                 DisasterAlert alert = new DisasterAlert();
                 alert.title      = title;

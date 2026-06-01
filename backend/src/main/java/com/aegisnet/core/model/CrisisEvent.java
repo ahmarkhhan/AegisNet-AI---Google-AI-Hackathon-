@@ -18,6 +18,7 @@ public class CrisisEvent {
     // Criticality
     private String criticality;       // CRITICAL, SEVERE, HIGH, MODERATE, LOW
     private int criticalityScore;     // 0-100
+    private int escalationProbability; // 0-100
 
     // Impact
     private int affectedPopulation;
@@ -69,6 +70,9 @@ public class CrisisEvent {
 
     public int getCriticalityScore() { return criticalityScore; }
     public void setCriticalityScore(int criticalityScore) { this.criticalityScore = criticalityScore; }
+
+    public int getEscalationProbability() { return escalationProbability; }
+    public void setEscalationProbability(int escalationProbability) { this.escalationProbability = escalationProbability; }
 
     public int getAffectedPopulation() { return affectedPopulation; }
     public void setAffectedPopulation(int affectedPopulation) { this.affectedPopulation = affectedPopulation; }

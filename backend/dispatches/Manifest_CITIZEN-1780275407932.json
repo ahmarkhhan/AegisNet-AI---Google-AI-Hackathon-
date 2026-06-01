@@ -1,0 +1,11 @@
+{
+  "eventId": "CITIZEN-1780275407932",
+  "target_agency": "Rescue 1122 + NDMA Flood Unit",
+  "zone": "Murree",
+  "coordinates": [33.907000, 73.394300],
+  "squads_deployed": 4,
+  "severity": 100,
+  "escalation_probability": 99,
+  "auth": "ANTIGRAVITY_SWARM_AUTO",
+  "timestamp": "2026-06-01T05:57:04.708665200"
+}

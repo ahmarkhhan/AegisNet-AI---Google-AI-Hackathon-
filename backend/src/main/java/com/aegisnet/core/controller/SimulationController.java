@@ -47,8 +47,8 @@ public class SimulationController {
         crisisAgent.submitCitizenReport(type, title, description, severity, affectedCount, lat, lng);
         
         // Broadcast
-        messagingTemplate.convertAndSend("/topic/crisis-events", crisisAgent.getActiveEvents());
-        messagingTemplate.convertAndSend("/topic/traces", "📱 [Citizen Feed] Direct citizen alert processed: " + title);
+        messagingTemplate.convertAndSend("/topic/crisis-events", java.util.Objects.requireNonNull(crisisAgent.getActiveEvents()));
+        messagingTemplate.convertAndSend("/topic/traces", java.util.Objects.requireNonNull("📱 [Citizen Feed] Direct citizen alert processed: " + title));
         
         return ResponseEntity.ok("Citizen Report Ingested and Broadcasted");
     }

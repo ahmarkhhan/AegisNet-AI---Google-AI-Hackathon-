@@ -54,6 +54,39 @@ export interface CrisisEvent {
   lastUpdated: string;
 }
 
+export interface AgentTraceEntry {
+  role: string;
+  agentName: string;
+  phase: string;
+  message: string;
+  toolName: string | null;
+  timestamp: string;
+}
+
+export interface DashboardStatsData {
+  activeAlerts: number;
+  signalsProcessed: number;
+  avgResponseTimeMinutes: number;
+  systemReadinessPercent: number;
+  totalAffectedPopulation: number;
+  activeAgents: number;
+  dispatchesExecuted: number;
+  totalCrisisEvents: number;
+}
+
+export interface DispatchManifestData {
+  eventId: string;
+  targetAgency: string;
+  zone: string;
+  latitude: number;
+  longitude: number;
+  squadsDeployed: number;
+  status: string;
+  manifestFile: string;
+  authorization: string;
+  createdAt: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -63,6 +96,21 @@ export class WebsocketService {
   public crisisEvents = signal<CrisisEvent[]>([]);
   public agentTraces = signal<string[]>([]);
   public connectionStatus = signal<boolean>(false);
+  public lastSyncTime = signal<Date | null>(null);
+
+  // Structured agent trace drawer (global, visible from any tab)
+  public agentTraceDrawer = signal<AgentTraceEntry[]>([]);
+  public showTraceDrawer = signal<boolean>(false);
+
+  // Dashboard stats from backend
+  public dashboardStats = signal<DashboardStatsData>({
+    activeAlerts: 0, signalsProcessed: 0, avgResponseTimeMinutes: 0,
+    systemReadinessPercent: 100, totalAffectedPopulation: 0,
+    activeAgents: 6, dispatchesExecuted: 0, totalCrisisEvents: 0
+  });
+
+  // Dispatch manifests
+  public dispatchManifests = signal<DispatchManifestData[]>([]);
 
   // Selected event for detail view
   public selectedEvent = signal<CrisisEvent | null>(null);
@@ -71,11 +119,13 @@ export class WebsocketService {
 
   private stompClient: Client | null = null;
 
-  constructor() {
-    this.connectWebSocket();
+  constructor() {}
+  
+  public initConnections(crisisData: any) {
+    this.connectWebSocket(crisisData);
   }
 
-  private connectWebSocket() {
+  private connectWebSocket(crisisData: any) {
     this.addTrace('> [System] Connecting to Nigehban AI backend...');
 
     this.stompClient = new Client({
@@ -86,11 +136,13 @@ export class WebsocketService {
 
       onConnect: () => {
         this.connectionStatus.set(true);
+        this.lastSyncTime.set(new Date());
         this.addTrace('> [System] WebSocket CONNECTED. Crisis Intelligence Engine active.');
 
         this.stompClient!.subscribe('/topic/city-threats', (message) => {
           try {
             this.cityThreats.set(JSON.parse(message.body));
+            this.lastSyncTime.set(new Date());
           } catch (e) { console.error('Parse error:', e); }
         });
 
@@ -103,6 +155,47 @@ export class WebsocketService {
 
         this.stompClient!.subscribe('/topic/traces', (message) => {
           this.addTrace('> ' + message.body);
+        });
+
+        this.stompClient!.subscribe('/topic/agent-logs', (message) => {
+          try {
+            const logEvent = JSON.parse(message.body);
+            if (crisisData && crisisData.addAgentLog) {
+               crisisData.addAgentLog(logEvent.role, logEvent.message, logEvent.phase, logEvent.toolName, logEvent.timestamp);
+            }
+            // Also push to global trace drawer
+            this.agentTraceDrawer.update(logs => [{
+              role: logEvent.role || logEvent.agentName,
+              agentName: logEvent.agentName || logEvent.role,
+              phase: logEvent.phase || 'REASONING',
+              message: logEvent.message,
+              toolName: logEvent.toolName || null,
+              timestamp: logEvent.timestamp || new Date().toLocaleTimeString('en-GB')
+            }, ...logs].slice(0, 100));
+          } catch (e) { console.error('Agent log parse error:', e); }
+        });
+
+        this.stompClient!.subscribe('/topic/autonomous-actions', (message) => {
+          try {
+            const action = JSON.parse(message.body);
+            if (crisisData && crisisData.handleAutonomousAction) {
+               crisisData.handleAutonomousAction(action);
+            }
+          } catch (e) { console.error('Action parse error:', e); }
+        });
+
+        this.stompClient!.subscribe('/topic/dashboard-stats', (message) => {
+          try {
+            const stats = JSON.parse(message.body);
+            this.dashboardStats.set(stats);
+          } catch (e) { console.error('Dashboard stats parse error:', e); }
+        });
+
+        this.stompClient!.subscribe('/topic/dispatch-log', (message) => {
+          try {
+            const manifest = JSON.parse(message.body);
+            this.dispatchManifests.update(list => [manifest, ...list].slice(0, 50));
+          } catch (e) { console.error('Dispatch log parse error:', e); }
         });
       },
 
@@ -233,6 +326,32 @@ export class WebsocketService {
       case 'EPIDEMIC': return '🦠';
       
       default: return '⚠️';
+    }
+  }
+
+  getPhaseColor(phase: string): string {
+    switch (phase) {
+      case 'PERCEPTION': return '#38bdf8'; // sky
+      case 'REASONING': return '#fbbf24';  // amber
+      case 'TOOL_CALL': return '#a78bfa';  // purple
+      case 'ACTION': return '#34d399';     // emerald
+      case 'RESULT': return '#e2e8f0';     // slate-200
+      case 'ERROR': return '#f87171';      // red
+      case 'FALLBACK': return '#fb923c';   // orange
+      default: return '#94a3b8';           // slate-400
+    }
+  }
+
+  getPhaseIcon(phase: string): string {
+    switch (phase) {
+      case 'PERCEPTION': return '👁️';
+      case 'REASONING': return '🧠';
+      case 'TOOL_CALL': return '🔧';
+      case 'ACTION': return '⚡';
+      case 'RESULT': return '✅';
+      case 'ERROR': return '❌';
+      case 'FALLBACK': return '🔄';
+      default: return '📋';
     }
   }
 }

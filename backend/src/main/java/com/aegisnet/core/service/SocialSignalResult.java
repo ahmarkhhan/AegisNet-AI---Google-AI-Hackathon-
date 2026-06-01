@@ -7,6 +7,7 @@ import java.util.*;
  * Shared DTO for Social Media Signals (Bluesky, Mastodon, Reddit)
  */
 @Getter
+@SuppressWarnings("null")
 public class SocialSignalResult {
     private final String platform;
     private final Map<String, Integer> citySeverities = new HashMap<>();

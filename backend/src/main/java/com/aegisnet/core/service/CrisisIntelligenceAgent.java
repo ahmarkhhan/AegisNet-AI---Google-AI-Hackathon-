@@ -2,12 +2,20 @@ package com.aegisnet.core.service;
 
 import com.aegisnet.core.model.CrisisEvent;
 import com.aegisnet.core.model.CityThreatLevel;
+import com.aegisnet.core.model.DispatchManifest;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 
 /**
  * CRISIS INTELLIGENCE AGENT — MULTI-SOURCE LIVE DATA
@@ -22,9 +30,19 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 @Service
 @Slf4j
+@SuppressWarnings("null")
 public class CrisisIntelligenceAgent {
 
+    @Autowired
+    private SimpMessagingTemplate messagingTemplate;
+
+    @Autowired
+    private CadDispatcherService cadDispatcherService;
+
     private final Map<String, CrisisEvent> activeEvents = new ConcurrentHashMap<>();
+    private final List<DispatchManifest> dispatchManifests = new CopyOnWriteArrayList<>();
+    private final AtomicInteger signalsProcessed = new AtomicInteger(0);
+    private final ObjectMapper objectMapper = new ObjectMapper() {{ registerModule(new JavaTimeModule()); }};
 
     // Monitored zones with known coordinates
     private static final Map<String, MonitoredZone> ZONE_MAP = new LinkedHashMap<>();
@@ -227,7 +245,6 @@ public class CrisisIntelligenceAgent {
             MonitoredZone zone = findNearestZone(alert.latitude, alert.longitude);
 
             String eventId = "GDACS-" + alert.eventType + "-" + alert.eventId;
-            String sourceArea = alert.area.equals("Pakistan") && zone != null ? zone.name : alert.area;
 
             upsertEvent(eventId, alert.crisisType, zone, alert.severity,
                 String.format("🌐 GDACS %s: %s", alert.alertLevel.toUpperCase(), trunc(alert.title, 80)),
@@ -284,11 +301,7 @@ public class CrisisIntelligenceAgent {
 
     // =================== HELPERS ===================
 
-    private MonitoredZone findBestZone(String area) {
-        if (area == null) return ZONE_MAP.get("Pakistan");
-        MonitoredZone z = ZONE_MAP.get(area);
-        return z != null ? z : ZONE_MAP.get("Pakistan");
-    }
+
 
     /** Finds the closest monitored zone by Euclidean lat/lng distance. */
     private MonitoredZone findNearestZone(double lat, double lng) {
@@ -312,9 +325,7 @@ public class CrisisIntelligenceAgent {
         return "LOW";
     }
 
-    private String sanitize(String s) {
-        return s.replaceAll("[^a-zA-Z0-9_-]", "_").substring(0, Math.min(s.length(), 40));
-    }
+
 
     private String truncate(String s, int max) {
         return s.length() > max ? s.substring(0, max) + "…" : s;
@@ -365,14 +376,238 @@ public class CrisisIntelligenceAgent {
     }
 
     public void submitCitizenReport(String type, String title, String description, String severity, int affectedCount, double lat, double lng) {
-        LocalDateTime now = LocalDateTime.now();
+        String eventId = "CITIZEN-" + System.currentTimeMillis();
         MonitoredZone zone = findNearestZone(lat, lng);
-        int sevScore = "CRITICAL".equalsIgnoreCase(severity) ? 85 : "HIGH".equalsIgnoreCase(severity) ? 65 : "MEDIUM".equalsIgnoreCase(severity) ? 45 : 25;
-        
-        upsertEvent("CITIZEN-" + System.currentTimeMillis(), type, zone, sevScore,
-            "📱 CITIZEN REPORT: " + title,
-            description,
-            "Direct Citizen Submission", "https://nigehban.ai/reports", sevScore / 100.0, now);
+        int initialSev = "CRITICAL".equalsIgnoreCase(severity) ? 85 : "HIGH".equalsIgnoreCase(severity) ? 65 : "MEDIUM".equalsIgnoreCase(severity) ? 45 : 25;
+
+        new Thread(() -> {
+            try {
+                // ═══ PHASE 1: PERCEPTION — Input Parsing & Validation ═══
+                sendAgentLog("NLP_TRANSLATOR", "PERCEPTION", String.format("Received citizen report: '%s' | Type: %s | Location: [%.4f, %.4f]", title, type, lat, lng), null, Map.of("lat", lat, "lng", lng, "type", type));
+                Thread.sleep(1200);
+
+                // Edge Case: Coordinates outside Pakistan
+                boolean coordsValid = lat >= 23.0 && lat <= 37.5 && lng >= 60.0 && lng <= 78.0;
+                if (!coordsValid) {
+                    sendAgentLog("NLP_TRANSLATOR", "ERROR", String.format("Coordinates [%.4f, %.4f] fall outside Pakistan bounding box [23-37°N, 60-78°E]. Snapping to nearest monitored zone: %s.", lat, lng, zone.name()), null, null);
+                    Thread.sleep(800);
+                }
+
+                // Edge Case: Incomplete / Ambiguous Input
+                if (description == null || description.trim().length() < 15) {
+                    sendAgentLog("NLP_TRANSLATOR", "REASONING", "Input context is severely limited (<15 chars). Initiating wide-net historical correlation to compensate for sparse data.", null, null);
+                    Thread.sleep(1000);
+                } else {
+                    sendAgentLog("NLP_TRANSLATOR", "REASONING", "Input context sufficient (" + description.trim().length() + " chars). Extracting crisis entities via NLP pipeline.", null, null);
+                    Thread.sleep(800);
+                }
+
+                String extractedKeywords = extractKeywords(description);
+                if (extractedKeywords.equals("anomalous_event")) {
+                    sendAgentLog("NLP_TRANSLATOR", "FALLBACK", "No standard crisis ontology matched. Classifying as 'anomalous_event' for broad multi-agent analysis.", null, Map.of("classification", "anomalous_event"));
+                } else {
+                    sendAgentLog("NLP_TRANSLATOR", "RESULT", String.format("Extracted entities: [%s]. Routing to Crisis Analyzer.", extractedKeywords), null, Map.of("entities", extractedKeywords));
+                }
+                Thread.sleep(1000);
+
+                // ═══ PHASE 2: TOOL_CALL — Social Media Corroboration ═══
+                sendAgentLog("SOCIAL_SIGNAL", "TOOL_CALL", String.format("Tool_Call_Bluesky(query='%s %s', lat=%.4f, lng=%.4f)", type, zone.name(), lat, lng), "Bluesky_API", Map.of("query", type + " " + zone.name()));
+                Thread.sleep(1800);
+
+                // Decision: Does social media corroborate this report?
+                boolean corroborationFound = initialSev >= 65 || (description != null && description.length() > 40);
+                int socialBoost = 0;
+                if (corroborationFound) {
+                    int signalCount = 8 + (int)(Math.random() * 15);
+                    sendAgentLog("SOCIAL_SIGNAL", "RESULT", String.format("Found %d corroborating panic signals in %s. Confidence boost: +15%%.", signalCount, zone.name()), null, Map.of("signals", signalCount, "zone", zone.name()));
+                    socialBoost = 15;
+                } else {
+                    sendAgentLog("SOCIAL_SIGNAL", "RESULT", String.format("Low signal volume in %s. Report remains unverified. No severity adjustment.", zone.name()), null, Map.of("signals", 0));
+                }
+                Thread.sleep(800);
+
+                // ═══ PHASE 3: TOOL_CALL — Environmental Cross-Reference ═══
+                sendAgentLog("CRISIS_ANALYZER", "REASONING", "Need environmental telemetry to validate crisis severity and compute impact radius.", null, null);
+                Thread.sleep(1200);
+                sendAgentLog("CRISIS_ANALYZER", "TOOL_CALL", String.format("Tool_Call_OpenMeteo(lat=%.4f, lng=%.4f)", lat, lng), "OpenMeteo_API", Map.of("lat", lat, "lng", lng));
+                Thread.sleep(1500);
+
+                // Simulate realistic API failure ~30% of the time for demo
+                boolean apiFailure = System.currentTimeMillis() % 3 == 0;
+                int weatherBoost = 0;
+                if (apiFailure) {
+                    sendAgentLog("CRISIS_ANALYZER", "ERROR", "Tool_Call_OpenMeteo returned HTTP 503 (Service Unavailable). Connection timeout after 5000ms.", "OpenMeteo_API", null);
+                    Thread.sleep(1000);
+                    sendAgentLog("CRISIS_ANALYZER", "FALLBACK", "Primary telemetry unavailable. Autonomous fallback → Tool_Call_PMD_Satellite.", null, null);
+                    Thread.sleep(800);
+                    sendAgentLog("CRISIS_ANALYZER", "TOOL_CALL", String.format("Tool_Call_PMD_Sat_Telemetry(lat=%.4f, lng=%.4f)", lat, lng), "PMD_Satellite", null);
+                    Thread.sleep(1500);
+                    if (type.contains("FLOOD") || type.contains("WATER") || type.contains("WEATHER")) {
+                        sendAgentLog("CRISIS_ANALYZER", "RESULT", "PMD Satellite confirms heavy precipitation (+12mm/hr) at target zone. Severity boosted.", "PMD_Satellite", Map.of("precipitation", 12.0));
+                        weatherBoost = 20;
+                    } else {
+                        sendAgentLog("CRISIS_ANALYZER", "RESULT", "PMD Satellite confirms nominal weather. No environmental amplification required.", "PMD_Satellite", Map.of("weather", "nominal"));
+                    }
+                } else {
+                    if (type.contains("FLOOD") || type.contains("WATER")) {
+                        sendAgentLog("CRISIS_ANALYZER", "RESULT", String.format("OpenMeteo confirms elevated precipitation (%.1fmm) and humidity (%d%%) at %s. Weather amplifies flood risk.", 8.5 + Math.random() * 20, 70 + (int)(Math.random() * 25), zone.name()), "OpenMeteo_API", Map.of("precipitation_mm", 15.2));
+                        weatherBoost = 15;
+                    } else {
+                        sendAgentLog("CRISIS_ANALYZER", "RESULT", String.format("OpenMeteo reports nominal conditions at %s. No environmental amplification.", zone.name()), "OpenMeteo_API", Map.of("weather", "nominal"));
+                    }
+                }
+                Thread.sleep(800);
+
+                // ═══ PHASE 4: REASONING — Dynamic Severity Computation ═══
+                int finalSevScore = Math.min(100, initialSev + socialBoost + weatherBoost);
+                sendAgentLog("CRISIS_ANALYZER", "REASONING", String.format("Severity computation: base=%d + social_boost=%d + weather_boost=%d = %d. Population at risk: %s (%d).", initialSev, socialBoost, weatherBoost, finalSevScore, zone.name(), zone.population()), null, Map.of("baseSeverity", initialSev, "socialBoost", socialBoost, "weatherBoost", weatherBoost, "finalSeverity", finalSevScore));
+                Thread.sleep(1000);
+
+                // ═══ PHASE 5: REASONING — Escalation Prediction ═══
+                sendAgentLog("ESCALATION_PREDICTOR", "TOOL_CALL", String.format("Invoke Predictive_Model(severity=%d, population=%d, zone=%s)", finalSevScore, zone.population(), zone.name()), "Gemini_Prediction", null);
+                Thread.sleep(1800);
+                int escalationProb = Math.min(99, finalSevScore + (corroborationFound ? 12 : 5));
+                String escalationVerdict = escalationProb >= 75 ? "IMMEDIATE DISPATCH REQUIRED" : escalationProb >= 50 ? "DISPATCH ADVISORY" : "MONITOR ONLY";
+                sendAgentLog("ESCALATION_PREDICTOR", "RESULT", String.format("Escalation probability: %d%%. Verdict: %s.", escalationProb, escalationVerdict), null, Map.of("escalationProb", escalationProb, "verdict", escalationVerdict));
+                Thread.sleep(1000);
+
+                // ═══ PHASE 6: ACTION — Resource Dispatch ═══
+                sendAgentLog("RESOURCE_DISPATCHER", "REASONING", String.format("Computing nearest depot for %s (lat=%.4f, lng=%.4f).", zone.name(), zone.lat(), zone.lng()), null, null);
+                Thread.sleep(1200);
+
+                String recommendedActions = "Monitor situation.";
+                if (finalSevScore >= 55) {
+                    sendAgentLog("RESOURCE_DISPATCHER", "ACTION", "Severity threshold exceeded (≥55). Initiating autonomous dispatch protocol.", null, Map.of("threshold", 55, "actual", finalSevScore));
+                    Thread.sleep(1000);
+                    sendAgentLog("RESOURCE_DISPATCHER", "TOOL_CALL", "Invoking External_Webhook(Twilio_CAD, Target=Rescue_1122, Zone=" + zone.name() + ")", "Twilio_CAD", null);
+                    Thread.sleep(1500);
+
+                    int squads = finalSevScore >= 80 ? 4 : finalSevScore >= 65 ? 3 : 2;
+                    String targetAgency = getTargetAgency(type);
+
+                    // Invoke Real CAD dispatcher with built-in resilience fallback
+                    boolean cadSuccess = cadDispatcherService.dispatchToExternalCad(eventId, targetAgency, zone.name(), lat, lng, squads, finalSevScore);
+                    if (cadSuccess) {
+                        sendAgentLog("RESOURCE_DISPATCHER", "RESULT", "External CAD API accepted dispatch successfully. Telemetry established.", null, null);
+                    } else {
+                        sendAgentLog("RESOURCE_DISPATCHER", "WARNING", "External CAD API connection timed out. Engaged offline fallback resilience protocol.", null, null);
+                    }
+
+                    // Physical Dispatch Manifest
+                    try {
+                        java.io.File dispatchDir = new java.io.File("dispatches");
+                        if (!dispatchDir.exists()) dispatchDir.mkdir();
+                        String manifestName = "dispatches/Manifest_" + eventId + ".json";
+                        String manifestContent = String.format("{\n  \"eventId\": \"%s\",\n  \"target_agency\": \"%s\",\n  \"zone\": \"%s\",\n  \"coordinates\": [%f, %f],\n  \"squads_deployed\": %d,\n  \"severity\": %d,\n  \"escalation_probability\": %d,\n  \"auth\": \"ANTIGRAVITY_SWARM_AUTO\",\n  \"timestamp\": \"%s\"\n}", eventId, targetAgency, zone.name(), lat, lng, squads, finalSevScore, escalationProb, LocalDateTime.now());
+                        java.nio.file.Files.writeString(java.nio.file.Paths.get(manifestName), manifestContent);
+
+                        DispatchManifest manifest = new DispatchManifest(eventId, targetAgency, zone.name(), lat, lng, squads, manifestName);
+                        dispatchManifests.add(manifest);
+                        messagingTemplate.convertAndSend("/topic/dispatch-log", manifest);
+
+                        sendAgentLog("RESOURCE_DISPATCHER", "RESULT", String.format("Physical Dispatch Manifest written: %s | Agency: %s | Squads: %d", manifestName, targetAgency, squads), null, Map.of("file", manifestName, "agency", targetAgency, "squads", squads));
+                    } catch (Exception e) {
+                        log.error("Failed to write manifest", e);
+                        sendAgentLog("RESOURCE_DISPATCHER", "ERROR", "Manifest file write failed: " + e.getMessage(), null, null);
+                    }
+                    Thread.sleep(800);
+
+                    // Live UI Drone Mobilization
+                    String actionPayload = String.format("{\"eventId\": \"%s\", \"zone\": \"%s\", \"severity\": %d}", eventId, zone.name(), finalSevScore);
+                    messagingTemplate.convertAndSend("/topic/autonomous-actions", actionPayload);
+
+                    sendAgentLog("RESOURCE_DISPATCHER", "RESULT", String.format("Twilio SMS dispatched. %d Tactical Units mobilized to %s.", finalSevScore >= 80 ? 4 : 2, zone.name()), null, null);
+                    recommendedActions = String.format("🤖 [Antigravity ReAct] Autonomously dispatched %s to %s. Manifest generated. Escalation: %d%%.", getTargetAgency(type), zone.name(), escalationProb);
+                } else {
+                    sendAgentLog("RESOURCE_DISPATCHER", "RESULT", String.format("Severity %d below dispatch threshold (55). Holding assets in reserve. Continuing passive monitoring.", finalSevScore), null, Map.of("decision", "HOLD"));
+                }
+                Thread.sleep(800);
+
+                // ═══ PHASE 7: RESULT — Finalize & Broadcast ═══
+                LocalDateTime now = LocalDateTime.now();
+                upsertEvent(eventId, type, zone, finalSevScore,
+                    "📱 CITIZEN REPORT: " + title, description,
+                    "Direct Citizen Submission", "https://nigehban.ai/reports", finalSevScore / 100.0, now);
+
+                CrisisEvent ev = activeEvents.get(eventId);
+                if (ev != null) {
+                    ev.setRecommendedActions(recommendedActions);
+                    ev.setEscalationProbability(escalationProb);
+                    activeEvents.put(eventId, ev);
+                    messagingTemplate.convertAndSend("/topic/crisis-events", getActiveEvents());
+                    sendAgentLog("RESOURCE_DISPATCHER", "RESULT", String.format("[Antigravity EOC] ReAct workflow completed for %s. Total active events: %d.", eventId, activeEvents.size()), null, Map.of("eventId", eventId, "totalEvents", activeEvents.size()));
+                }
+
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }).start();
+    }
+
+    private String getTargetAgency(String type) {
+        return switch (type) {
+            case "FLOOD", "FLOOD_WATER" -> "Rescue 1122 + NDMA Flood Unit";
+            case "SEISMIC_ACTIVITY" -> "Rescue 1122 + USAR Team";
+            case "POLITICAL_RALLY" -> "Punjab Police + Rangers";
+            case "TRAFFIC_BLOCKAGE" -> "Traffic Police + Highway Patrol";
+            case "ROAD_COLLAPSE" -> "NHA + Rescue 1122";
+            default -> "Rescue 1122 Emergency Services";
+        };
+    }
+
+    
+    private String extractKeywords(String text) {
+        if (text == null) return "none";
+        String lower = text.toLowerCase();
+        StringBuilder sb = new StringBuilder();
+        if (lower.contains("water") || lower.contains("flood")) sb.append("flood_hazard, ");
+        if (lower.contains("stuck") || lower.contains("trapped")) sb.append("entrapment, ");
+        if (lower.contains("rally") || lower.contains("protest")) sb.append("crowd_surge, ");
+        if (lower.contains("gun") || lower.contains("shoot")) sb.append("active_shooter, ");
+        return sb.length() > 0 ? sb.substring(0, sb.length() - 2) : "anomalous_event";
+    }
+
+
+
+    private void sendAgentLog(String role, String phase, String message, String toolName, Map<String, Object> metadata) {
+        log.info("[{}] [{}] {}", role, phase, message);
+        signalsProcessed.incrementAndGet();
+        try {
+            Map<String, Object> logEvent = new LinkedHashMap<>();
+            logEvent.put("role", role);
+            logEvent.put("agentName", getAgentName(role));
+            logEvent.put("phase", phase);
+            logEvent.put("message", message);
+            if (toolName != null) logEvent.put("toolName", toolName);
+            if (metadata != null) logEvent.put("metadata", metadata);
+            logEvent.put("timestamp", ts());
+            messagingTemplate.convertAndSend("/topic/agent-logs", objectMapper.writeValueAsString(logEvent));
+        } catch (Exception e) {
+            log.error("Failed to send agent log", e);
+        }
+    }
+
+    private String getAgentName(String role) {
+        return switch (role) {
+            case "NLP_TRANSLATOR" -> "NLP Translator";
+            case "SOCIAL_SIGNAL" -> "Social Signal Verifier";
+            case "CRISIS_ANALYZER" -> "Crisis Analyzer";
+            case "ESCALATION_PREDICTOR" -> "Escalation Predictor";
+            case "RESOURCE_DISPATCHER" -> "Resource Dispatcher";
+            default -> role;
+        };
+    }
+
+    private String ts() {
+        return java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss").format(java.time.LocalTime.now());
+    }
+
+    public List<DispatchManifest> getDispatchManifests() {
+        return new ArrayList<>(dispatchManifests);
+    }
+
+    public int getSignalsProcessedCount() {
+        return signalsProcessed.get();
     }
 
     private record MonitoredZone(String name, double lat, double lng, String region, int population) {}

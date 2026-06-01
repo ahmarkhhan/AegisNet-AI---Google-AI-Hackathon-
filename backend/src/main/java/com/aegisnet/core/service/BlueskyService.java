@@ -14,6 +14,7 @@ import java.util.*;
  */
 @Service
 @Slf4j
+@SuppressWarnings("null")
 public class BlueskyService {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -44,6 +45,7 @@ public class BlueskyService {
 
         try {
             String jsonResponse = restTemplate.getForObject(url, String.class);
+            if (jsonResponse == null) return result;
             JsonNode root = objectMapper.readTree(jsonResponse);
             JsonNode posts = root.path("posts");
 

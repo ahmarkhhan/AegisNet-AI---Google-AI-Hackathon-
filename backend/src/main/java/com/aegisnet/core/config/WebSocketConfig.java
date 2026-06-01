@@ -11,7 +11,7 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
-    public void configureMessageBroker(MessageBrokerRegistry config) {
+    public void configureMessageBroker(@org.springframework.lang.NonNull MessageBrokerRegistry config) {
         // Enable a simple memory-based message broker
         config.enableSimpleBroker("/topic");
         // Prefix for messages bound for methods annotated with @MessageMapping
@@ -19,7 +19,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     }
 
     @Override
-    public void registerStompEndpoints(StompEndpointRegistry registry) {
+    public void registerStompEndpoints(@org.springframework.lang.NonNull StompEndpointRegistry registry) {
         // Endpoint that clients will use to connect to our WebSocket server
         registry.addEndpoint("/ws-aegisnet").setAllowedOriginPatterns("*").withSockJS();
     }

@@ -20,6 +20,7 @@ import java.util.*;
  */
 @Service
 @Slf4j
+@SuppressWarnings("null")
 public class RedditSocialService {
 
     private final ObjectMapper objectMapper = new ObjectMapper();

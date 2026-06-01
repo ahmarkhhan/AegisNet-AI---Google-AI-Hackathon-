@@ -19,6 +19,7 @@ import java.util.*;
  */
 @Service
 @Slf4j
+@SuppressWarnings("null")
 public class ReliefWebService {
 
     private final ObjectMapper objectMapper = new ObjectMapper();

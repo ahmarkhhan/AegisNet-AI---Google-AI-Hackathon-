@@ -14,6 +14,7 @@ import java.util.*;
  */
 @Service
 @Slf4j
+@SuppressWarnings("null")
 public class MastodonService {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -42,6 +43,7 @@ public class MastodonService {
 
         try {
             String jsonResponse = restTemplate.getForObject(url, String.class);
+            if (jsonResponse == null) return result;
             JsonNode statuses = objectMapper.readTree(jsonResponse);
 
             if (statuses.isMissingNode() || !statuses.isArray()) return result;
