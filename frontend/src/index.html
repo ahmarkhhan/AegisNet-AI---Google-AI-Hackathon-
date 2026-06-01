@@ -15,6 +15,91 @@
   </script>
 </head>
 <body>
+  <canvas id="antigravity-bg"></canvas>
   <app-root></app-root>
+  <script>
+    const canvas = document.getElementById('antigravity-bg');
+    const ctx = canvas.getContext('2d');
+
+    let width, height;
+    let particles = [];
+    const numParticles = 800; // Density of dots
+
+    function resize() {
+        width = canvas.width = window.innerWidth;
+        height = canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    function initParticles() {
+        particles = [];
+        for (let i = 0; i < numParticles; i++) {
+            const phi = Math.acos(1 - 2 * (i + 0.5) / numParticles);
+            const theta = Math.PI * (1 + Math.sqrt(5)) * i;
+            const r = 350 + Math.random() * 250; 
+            
+            particles.push({
+                baseX: r * Math.sin(phi) * Math.cos(theta),
+                baseY: r * Math.sin(phi) * Math.sin(theta),
+                baseZ: r * Math.cos(phi),
+                size: Math.random() * 1.5 + 0.5,
+                color: Math.random() > 0.85 ? '#ffffff' : (Math.random() > 0.5 ? '#749BFF' : '#3186FF')
+            });
+        }
+    }
+    initParticles();
+
+    let angleX = 0;
+    let angleY = 0;
+
+    function animate() {
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(0, 0, width, height);
+
+        angleX += 0.0007;
+        angleY += 0.0012;
+
+        const cx = width / 2;
+        const cy = height / 2;
+
+        particles.forEach(p => {
+            let cosY = Math.cos(angleY);
+            let sinY = Math.sin(angleY);
+            let x1 = p.baseX * cosY - p.baseZ * sinY;
+            let z1 = p.baseZ * cosY + p.baseX * sinY;
+
+            let cosX = Math.cos(angleX);
+            let sinX = Math.sin(angleX);
+            let y1 = p.baseY * cosX - z1 * sinX;
+            let z2 = z1 * cosX + p.baseY * sinX;
+
+            const focalLength = 800;
+            const scale = focalLength / (focalLength + z2);
+
+            const px = cx + x1 * scale;
+            const py = cy + y1 * scale;
+
+            if (z2 > -focalLength) {
+                ctx.save();
+                ctx.translate(px, py);
+                const ang = Math.atan2(py - cy, px - cx);
+                ctx.rotate(ang);
+                ctx.fillStyle = p.color;
+                ctx.globalAlpha = Math.max(0.1, Math.min(1, scale * 1.2));
+                
+                const dashLength = p.size * scale * 5; 
+                const dashThickness = p.size * scale;
+                ctx.fillRect(-dashLength / 2, -dashThickness / 2, dashLength, dashThickness);
+                
+                ctx.restore();
+            }
+        });
+
+        requestAnimationFrame(animate);
+    }
+    
+    animate();
+  </script>
 </body>
 </html>

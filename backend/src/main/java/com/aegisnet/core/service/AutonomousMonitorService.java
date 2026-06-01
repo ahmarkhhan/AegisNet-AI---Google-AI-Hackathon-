@@ -61,7 +61,7 @@ public class AutonomousMonitorService {
     }
 
     // ─── AGENT 1: WEATHER  ────────────────────────────────────────────────────
-    @Scheduled(fixedDelay = 30_000, initialDelay = 3_000)
+    @Scheduled(fixedDelay = 300_000, initialDelay = 3_000)
     public void weatherCycle() {
         String ts = ts();
         pushTrace(String.format("[%s] [Antigravity Agent: Meteorologist] Reasoning: Routine check for environmental anomalies in 5 cities.", ts));
@@ -91,7 +91,7 @@ public class AutonomousMonitorService {
     }
 
     // ─── AGENT 3: GDELT NEWS  ────────────────────────────────────────────────
-    @Scheduled(fixedDelay = 90_000, initialDelay = 12_000)
+    @Scheduled(fixedDelay = 300_000, initialDelay = 12_000)
     public void newsCycle() {
         String ts = ts();
         pushTrace(String.format("[%s] [Antigravity Agent: NewsIntel] Reasoning: Scanning global media for Pakistan crisis context.", ts));
@@ -117,7 +117,7 @@ public class AutonomousMonitorService {
     }
 
     // ─── AGENT 4: DECENTRALIZED SOCIAL SIGNALS ────────────────────────────────
-    @Scheduled(fixedDelay = 60_000, initialDelay = 15_000)
+    @Scheduled(fixedDelay = 300_000, initialDelay = 15_000)
     public void socialSignalsCycle() {
         String ts = ts();
         pushTrace(String.format("[%s] [Antigravity Agent: SocialVerifier] Reasoning: Checking decentralized networks for panic signals.", ts));
@@ -135,7 +135,7 @@ public class AutonomousMonitorService {
     }
 
     // ─── AGENT 5: ADVANCED INTEL (HDX, FIRMS, PMD) ────────────────────────────
-    @Scheduled(fixedDelay = 120_000, initialDelay = 20_000)
+    @Scheduled(fixedDelay = 600_000, initialDelay = 20_000)
     public void advancedIntelCycle() {
         String ts = ts();
         pushTrace(String.format("[%s] [Antigravity Agent: Coordinator] Reasoning: Correlating advanced intelligence (FIRMS/PMD/HDX).", ts));

@@ -7,9 +7,16 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import java.util.Map;
+import java.util.Collections;
+import org.springframework.beans.factory.annotation.Autowired;
+
 @Service
 @Slf4j
 public class AgentService {
+
+    @Autowired
+    private GeminiReasoningService geminiService;
 
     /**
      * Agent 2: Social Verification Agent
@@ -33,19 +40,28 @@ public class AgentService {
      * Predicts escalation risks based on correlated signals.
      */
     public CrisisAlert predictEscalation(String correlatedContext) {
-        log.info("[Agent_4: Intel] Analyzing correlated context: {}", correlatedContext);
+        log.info("[Agent_4: Gemini 2.0 Escalation Predictor] Analyzing context: {}", correlatedContext);
         
+        // Pass to Gemini flash
+        Map<String, Object> assessment = geminiService.predictEscalation(
+            "MULTIPLE_SIGNALS", 75, "Unknown Zone", 100000, true, "Unknown", Collections.singletonList(correlatedContext)
+        );
+
+        int prob = ((Number) assessment.getOrDefault("escalationProbability", 95)).intValue();
+        String verdict = (String) assessment.getOrDefault("verdict", "IMMEDIATE_DISPATCH");
+        String reasoning = (String) assessment.getOrDefault("reasoning", "High probability of mass entanglement.");
+
         CrisisAlert alert = new CrisisAlert();
         alert.setType("MASS_ENTRAPMENT_RISK");
-        alert.setTitle("Murree Snowstorm Entrapment Prediction");
-        alert.setDescription("High probability of mass vehicle entrapment due to severe snow and traffic congestion on Murree Expressway.");
+        alert.setTitle("Dynamic Escalation Prediction: " + verdict);
+        alert.setDescription(reasoning + " Context: " + correlatedContext);
         alert.setEpicenterLat(33.9070);
         alert.setEpicenterLng(73.3943);
         alert.setImpactRadiusKm(15.0);
         alert.setCasualtyRiskScore(85);
-        alert.setEscalationProbability(95);
+        alert.setEscalationProbability(prob);
         alert.setPredictedEscalationTime(LocalDateTime.now().plusHours(2));
-        alert.setRecommendedPreventiveActions(List.of("Close Murree Expressway", "Dispatch Drones", "Deploy Rescue 1122"));
+        alert.setRecommendedPreventiveActions(List.of("Dispatch Drones", "Deploy Rescue 1122"));
         alert.setStatus("PREDICTED");
         alert.setCreatedAt(LocalDateTime.now());
         

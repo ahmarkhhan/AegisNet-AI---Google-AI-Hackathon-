@@ -1,0 +1,11 @@
+{
+  "eventId": "CITIZEN-1780326857481",
+  "target_agency": "Rescue 1122 + NDMA Flood Unit",
+  "zone": "Islamabad",
+  "coordinates": [33.684400, 73.047900],
+  "squads_deployed": 4,
+  "severity": 95,
+  "escalation_probability": 99,
+  "auth": "ANTIGRAVITY_SWARM_AUTO",
+  "timestamp": "2026-06-01T20:14:37.620962200"
+}

@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { WebsocketService, CrisisEvent } from './services/websocket.service';
 import { CrisisDataService } from './services/crisis-data.service';
-import { CrisisAlert, AgentRole, EocDepot, ReportFormState } from './models/crisis.models';
+import { CrisisAlert, AgentRole, EocDepot, ReportFormState, FieldAgent } from './models/crisis.models';
 import * as L from 'leaflet';
 
 @Component({
@@ -45,6 +45,7 @@ export class App implements AfterViewInit, OnDestroy {
   public forceDispatched = signal<Set<number>>(new Set());
   public dispatchTimers = signal<Record<number, number>>({});
   public expandedBoards = signal<Set<number>>(new Set());
+  public expandedAsset = signal<string | null>(null);
 
   // ── Report Incident State ──
   public reportForm = signal<ReportFormState>({
@@ -238,6 +239,39 @@ export class App implements AfterViewInit, OnDestroy {
     return r * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   }
 
+  seededRandom(seed: number) {
+    let t = seed += 0x6D2B79F5;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  }
+
+  generateFieldAgents(count: number, prefix: string, region: string): FieldAgent[] {
+    const agents: FieldAgent[] = [];
+    const baseLat = region === 'Lahore' ? 31.5204 : region === 'Rawalpindi' ? 33.5984 : region === 'Murree' ? 33.9070 : 33.7184;
+    const baseLng = region === 'Lahore' ? 74.3587 : region === 'Rawalpindi' ? 73.0441 : region === 'Murree' ? 73.3943 : 73.0641;
+    
+    let seed = 0;
+    for(let i=0; i<prefix.length; i++) seed += prefix.charCodeAt(i);
+    
+    for (let i = 0; i < count; i++) {
+      const r1 = this.seededRandom(seed + i * 10);
+      const r2 = this.seededRandom(seed + i * 20 + 1);
+      const r3 = this.seededRandom(seed + i * 30 + 2);
+      const r4 = this.seededRandom(seed + i * 40 + 3);
+      const r5 = this.seededRandom(seed + i * 50 + 4);
+      
+      agents.push({
+        id: `${prefix}-${Math.floor(100 + r1 * 900)}`,
+        status: r2 > 0.3 ? 'EN ROUTE' : 'ON SCENE',
+        lat: Number((baseLat + (r3 - 0.5) * 0.1).toFixed(4)),
+        lng: Number((baseLng + (r4 - 0.5) * 0.1).toFixed(4)),
+        batteryOrFuel: Math.floor(40 + r5 * 60)
+      });
+    }
+    return agents;
+  }
+
   getRosters() {
     const region = this.selectedRegion();
     const alerts = this.getRegionalAlerts();
@@ -245,7 +279,9 @@ export class App implements AfterViewInit, OnDestroy {
     const hasSeismic = alerts.some(a => a.title.toLowerCase().includes('earthquake') || a.title.toLowerCase().includes('seismic'));
     const dispatches = alerts.filter(a => this.forceDispatched().has(a.id)).length;
 
-    if (region === 'Lahore') return [
+    let rosters: any[] = [];
+
+    if (region === 'Lahore') rosters = [
       { departmentName: 'Rescue 1122 Emergency Services', color: '#05FF80', assets: [
         { name: 'Rescue Inflatable Boats', total: 12, baseInUse: 2 + (hasFlood ? 6 : 0) + dispatches * 2, icon: '🛶' },
         { name: 'Paramedic Ambulances', total: 30, baseInUse: 8 + (hasSeismic ? 10 : 0) + dispatches * 3, icon: '🚑' },
@@ -259,7 +295,7 @@ export class App implements AfterViewInit, OnDestroy {
         { name: 'Highway Patrol Cars', total: 40, baseInUse: 12 + (hasFlood ? 8 : 0) + dispatches * 4, icon: '🚔' },
       ]},
     ];
-    if (region === 'Rawalpindi') return [
+    else if (region === 'Rawalpindi') rosters = [
       { departmentName: 'Rescue 1122 Emergency Services', color: '#05FF80', assets: [
         { name: 'Lai Nullah Rescue Boats', total: 15, baseInUse: 4 + (hasFlood ? 9 : 0) + dispatches * 2, icon: '🛶' },
         { name: 'Rapid Response Ambulances', total: 20, baseInUse: 6 + dispatches * 3, icon: '🚑' },
@@ -273,7 +309,7 @@ export class App implements AfterViewInit, OnDestroy {
         { name: 'Sector Ward Patrol Units', total: 25, baseInUse: 10 + dispatches * 3, icon: '🚔' },
       ]},
     ];
-    if (region === 'Murree') return [
+    else if (region === 'Murree') rosters = [
       { departmentName: 'Rescue 1122 Emergency Services', color: '#05FF80', assets: [
         { name: 'Heavy Snow-Plow Blades', total: 15, baseInUse: 6 + ((hasFlood || hasSeismic) ? 5 : 0) + dispatches * 3, icon: '🚜' },
         { name: 'Mountain Ambulance Crawlers', total: 10, baseInUse: 3 + dispatches * 2, icon: '🚑' },
@@ -287,7 +323,7 @@ export class App implements AfterViewInit, OnDestroy {
         { name: '4x4 Blizzard Command Jeeps', total: 20, baseInUse: 8 + dispatches * 3, icon: '🚔' },
       ]},
     ];
-    return [
+    else rosters = [
       { departmentName: 'CDA & Fire Fighting Unit', color: '#05FF80', assets: [
         { name: 'High-Rise Fire Engines', total: 12, baseInUse: 2 + dispatches * 2, icon: '🚒' },
         { name: 'Disaster Recovery Rigs', total: 8, baseInUse: 1 + (hasSeismic ? 4 : 0) + dispatches, icon: '🚛' },
@@ -301,6 +337,13 @@ export class App implements AfterViewInit, OnDestroy {
         { name: 'Diplomatic Enclave Interceptors', total: 30, baseInUse: 10 + dispatches * 2, icon: '🚔' },
       ]},
     ];
+
+    rosters.forEach(dept => {
+      dept.assets.forEach((asset: any) => {
+        asset.fieldAgents = this.generateFieldAgents(asset.baseInUse, asset.name.substring(0, 3).toUpperCase(), region);
+      });
+    });
+    return rosters;
   }
 
   getTotalAssets(): number { return this.getRosters().reduce((s, r) => s + r.assets.reduce((s2, a) => s2 + a.total, 0), 0); }

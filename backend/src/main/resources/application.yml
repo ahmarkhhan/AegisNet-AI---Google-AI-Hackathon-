@@ -31,3 +31,8 @@ logging:
     com.aegisnet.core.service.OpenMeteoService: DEBUG
     com.aegisnet.core.service.GdacsService: INFO
     com.aegisnet.core.service.GdeltService: INFO
+
+# ─── Gemini AI Reasoning Engine ─────────────────────────────────
+gemini:
+  api:
+    key: AQ.Ab8RN6K4N27b5UHuiIkStnuGzmmnzJ1hZwcYk391ZwObLPdAmQ

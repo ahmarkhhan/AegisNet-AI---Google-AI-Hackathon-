@@ -1,8 +1,8 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
 :root {
-  --portal-bg: #0B1120;
-  --portal-surface: #172033;
+  --portal-bg: transparent;
+  --portal-surface: rgba(23, 32, 51, 0.7);
   --portal-border: rgba(255, 255, 255, 0.08);
   --portal-accent: #38bdf8;
 }

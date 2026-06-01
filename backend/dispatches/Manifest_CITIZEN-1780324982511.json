@@ -1,0 +1,11 @@
+{
+  "eventId": "CITIZEN-1780324982511",
+  "target_agency": "Punjab Police + Rangers",
+  "zone": "Islamabad",
+  "coordinates": [33.729400, 73.093100],
+  "squads_deployed": 4,
+  "severity": 100,
+  "escalation_probability": 99,
+  "auth": "ANTIGRAVITY_SWARM_AUTO",
+  "timestamp": "2026-06-01T19:43:25.779574800"
+}

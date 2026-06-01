@@ -84,11 +84,20 @@ export interface EocAgent {
   logs: StructuredLog[];
 }
 
+export interface FieldAgent {
+  id: string;
+  status: string;
+  lat: number;
+  lng: number;
+  batteryOrFuel: number;
+}
+
 export interface ResourceAsset {
   name: string;
   total: number;
   baseInUse: number;
   icon: string;
+  fieldAgents?: FieldAgent[];
 }
 
 export interface DepartmentRoster {
