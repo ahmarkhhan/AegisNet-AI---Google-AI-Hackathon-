@@ -1,0 +1,11 @@
+{
+  "eventId": "CITIZEN-1780330279819",
+  "target_agency": "Rescue 1122 + NDMA Flood Unit",
+  "zone": "Lahore",
+  "coordinates": [31.558400, 74.326800],
+  "squads_deployed": 4,
+  "severity": 80,
+  "escalation_probability": 92,
+  "auth": "ANTIGRAVITY_SWARM_AUTO",
+  "timestamp": "2026-06-01T21:11:41.264380600"
+}
